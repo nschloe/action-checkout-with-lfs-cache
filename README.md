@@ -15,7 +15,7 @@ when used with
 
 ```yaml
 - name: Checkout code
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     lfs: true
 ```
@@ -25,15 +25,12 @@ Simply replace the above by
 
 ```yaml
 - name: Checkout code
-  uses: nschloe/action-cached-lfs-checkout@v1
+  uses: madrona-games/cached-lfs-checkout@v1
   # Use these to explicitly include/exclude files:
   # with:
   #   include: "*"
   #   exclude: ""
 ```
-
-Check it out [on the GitHub
-Marketplace](https://github.com/marketplace/actions/cached-lfs-checkout)!
 
 ### Further reading
 
