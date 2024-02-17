@@ -116,7 +116,7 @@ runs:
         enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
 
     - name: Restore LFS cache from Google Drive
-      uses: madrona-games/google-drive-cache@v1
+      uses: madrona-games/google-drive-actions/cache@v1
       if: inputs.cacheProvider == 'google-drive'
       with:
         path: |
