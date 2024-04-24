@@ -58,6 +58,16 @@ inputs:
       [Learn more about cross-os caching](https://github.com/actions/cache/blob/main/tips-and-workarounds.md#cross-os-cache).
     required: false
     default: false
+  ssh-key:
+    description: >
+      SSH key used to fetch the repository. The SSH key is configured with the local
+      git config, which enables your scripts to run authenticated git commands. The
+      post-job step removes the SSH key.
+      
+      [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    required: false
+    default: ""
+
 
 runs:
   using: "composite"
@@ -71,6 +81,7 @@ runs:
         token: ${{ inputs.token }}
         submodules: ${{ inputs.submodules }}
         persist-credentials: ${{ inputs.persist-credentials }}
+        ssh-key: ${{ inputs.ssh-key }}
 
     - name: Create LFS file list
       run: |
