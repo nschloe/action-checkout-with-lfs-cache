@@ -18,7 +18,7 @@ inputs:
   fetch-depth:
     description: "Number of commits to fetch. 0 indicates all history for all tags and branches"
     required: false
-    default: 1
+    default: "1"
   ref:
     description: >
       The branch, tag or SHA to checkout. When checking out the repository that
@@ -44,12 +44,12 @@ inputs:
       Whether to checkout submodules: `true` to checkout submodules or `recursive` to
       recursively checkout submodules.
     required: false
-    default: false
+    default: "false"
   persist-credentials:
     description: >
       'Whether to configure the token or SSH key with the local git config'
     required: false
-    default: true
+    default: "true"
   enableCrossOsArchive:
     description: >
       Whether the cache is cross-os compatible. This is useful to cache dependencies which
@@ -57,7 +57,13 @@ inputs:
       cache quota and help build for multiple platforms from the same cache.
       [Learn more about cross-os caching](https://github.com/actions/cache/blob/main/tips-and-workarounds.md#cross-os-cache).
     required: false
-    default: false
+    default: "false"
+  restoreOnly:
+    description: >
+      Whether the cache is restore only and shouldn't save it's cache. Useful when you only want to use the base branch cache and avoid
+      saving the cache for the current branch.
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -95,8 +101,20 @@ runs:
       shell: bash
 
     - name: Restore LFS cache
+      uses: actions/cache/restore@v3
+      if: ${{ inputs.restoreOnly == 'true' }}
+      id: lfs-cache
+      with:
+        path: |
+          .git/lfs
+          ${{ steps.cache-paths.outputs.CACHE_PATHS }}
+        key: lfs-${{ hashFiles('.lfs-assets-id') }}-v2
+        enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
+  
+    - name: LFS cache
       uses: actions/cache@v3
       id: lfs-cache
+      if: ${{ inputs.restoreOnly == 'false' }}
       with:
         path: |
           .git/lfs
