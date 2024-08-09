@@ -15,7 +15,7 @@ when used with
 
 ```yaml
 - name: Checkout code
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     lfs: true
 ```
@@ -25,7 +25,7 @@ Simply replace the above by
 
 ```yaml
 - name: Checkout code
-  uses: nschloe/action-cached-lfs-checkout@v1
+  uses: nschloe/action-cached-lfs-checkout@v2
   # Use these to explicitly include/exclude files:
   # with:
   #   include: "*"
