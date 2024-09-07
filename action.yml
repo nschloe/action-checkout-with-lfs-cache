@@ -60,15 +60,38 @@ inputs:
     default: false
   cacheProvider:
     description: >
-      The cache provider to use. Supported providers are `github` and `google-drive`
+      The cache provider to use. Supported providers are `github`, `s3`, and `google-drive`
     required: false
     default: github
+  s3Endpoint:
+    description: "The URL of the S3 bucket to use for caching"
+    required: false
+  s3AccessKey:
+    description: "The access key for the S3 bucket"
+    required: false
+  s3SecretKey:
+    description: "The secret key for the S3 bucket"
+    required: false
+  s3BucketName:
+    description: "The name of the S3 bucket to use for caching"
+    required: false
+  s3Port:
+    description: "The port of the S3 bucket to use for caching"
+    required: false
   googleServiceAccountCredentialsJSON:
     description: "The JSON contents of the Google Service Account credentials file"
     required: false
   googleDriveFolderID:
     description: "The ID of the Google Drive folder to use for caching"
     required: false
+  mainBranchRefName:
+    description: "The name of the main branch"
+    required: false
+    default: "main"
+  restoreOnly:
+    description: "Only restore the cache, do not save the cache"
+    required: false
+    default: false
 
 runs:
   using: "composite"
@@ -107,24 +130,99 @@ runs:
 
     - name: Restore LFS cache from Github
       uses: actions/cache@v4
-      if: inputs.cacheProvider == 'github'
+      if: inputs.cacheProvider == 'github' && !inputs.restoreOnly
       with:
         path: |
           .git/lfs
           ${{ steps.cache-paths.outputs.CACHE_PATHS }}
-        key: lfs-${{ hashFiles('.lfs-assets-id') }}-v2
+        key: lfs-v3-${{ github.ref_name }}-${{ hashFiles('.lfs-assets-id') }}
+        restore-keys: |
+          lfs-v3-${{ github.ref_name }}-
+          lfs-v3-${{ inputs.mainBranchRefName }}-
+          lfs-v3-
+        enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
+
+    - name: Restore Only LFS cache from Github
+      uses: actions/cache/restore@v4
+      if: inputs.cacheProvider == 'github' && inputs.restoreOnly
+      with:
+        path: |
+          .git/lfs
+          ${{ steps.cache-paths.outputs.CACHE_PATHS }}
+        key: lfs-v3-${{ github.ref_name }}-${{ hashFiles('.lfs-assets-id') }}
+        restore-keys: |
+          lfs-v3-${{ github.ref_name }}-
+          lfs-v3-${{ inputs.mainBranchRefName }}-
+          lfs-v3-
         enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
 
     - name: Restore LFS cache from Google Drive
       uses: madrona-games/google-drive-actions/cache@v1
-      if: inputs.cacheProvider == 'google-drive'
+      if: inputs.cacheProvider == 'google-drive' && !inputs.restoreOnly
       with:
         path: |
           .git/lfs
           ${{ steps.cache-paths.outputs.CACHE_PATHS }}
-        key: lfs-${{ hashFiles('.lfs-assets-id') }}-v2
+        key: lfs-v3-${{ github.ref_name }}-${{ hashFiles('.lfs-assets-id') }}
+        restore-keys: |
+          lfs-v3-${{ github.ref_name }}-
+          lfs-v3-${{ inputs.mainBranchRefName }}-
+          lfs-v3-
         google-service-account-credentials-json: ${{ inputs.googleServiceAccountCredentialsJSON }}
         google-drive-folder-id: ${{ inputs.googleDriveFolderID }}
+
+    - name: Restore Only LFS cache from Google Drive
+      uses: madrona-games/google-drive-actions/cache/restore@v1
+      if: inputs.cacheProvider == 'google-drive' && inputs.restoreOnly
+      with:
+        path: |
+          .git/lfs
+          ${{ steps.cache-paths.outputs.CACHE_PATHS }}
+        key: lfs-v3-${{ github.ref_name }}-${{ hashFiles('.lfs-assets-id') }}
+        restore-keys: |
+          lfs-v3-${{ github.ref_name }}-
+          lfs-v3-${{ inputs.mainBranchRefName }}-
+          lfs-v3-
+        google-service-account-credentials-json: ${{ inputs.googleServiceAccountCredentialsJSON }}
+        google-drive-folder-id: ${{ inputs.googleDriveFolderID }}
+
+    - name: Restore LFS cache from S3
+      if: inputs.cacheProvider == 's3' && !inputs.restoreOnly
+      uses: madrona-games/s3-actions-cache@v1
+      with:
+        endpoint: ${{ inputs.s3Endpoint }}
+        port: ${{ inputs.s3Port }}
+        accessKey: ${{ inputs.s3AccessKey }}
+        secretKey: ${{ inputs.s3SecretKey }}
+        bucket: ${{ inputs.s3BucketName }}
+        use-fallback: false
+        path: |
+          .git/lfs
+          ${{ steps.cache-paths.outputs.CACHE_PATHS }}
+        key: lfs-v3-${{ github.ref_name }}-${{ hashFiles('.lfs-assets-id') }}
+        restore-keys: |
+          lfs-v3-${{ github.ref_name }}-
+          lfs-v3-${{ inputs.mainBranchRefName }}-
+          lfs-v3-
+
+    - name: Only Restore LFS cache from S3
+      if: inputs.cacheProvider == 's3' && inputs.restoreOnly
+      uses: madrona-games/s3-actions-cache/restore@v1
+      with:
+        endpoint: ${{ inputs.s3Endpoint }}
+        port: ${{ inputs.s3Port }}
+        accessKey: ${{ inputs.s3AccessKey }}
+        secretKey: ${{ inputs.s3SecretKey }}
+        bucket: ${{ inputs.s3BucketName }}
+        use-fallback: false
+        path: |
+          .git/lfs
+          ${{ steps.cache-paths.outputs.CACHE_PATHS }}
+        key: lfs-v3-${{ github.ref_name }}-${{ hashFiles('.lfs-assets-id') }}
+        restore-keys: |
+          lfs-v3-${{ github.ref_name }}-
+          lfs-v3-${{ inputs.mainBranchRefName }}-
+          lfs-v3-
 
     - name: Git LFS Pull
       run: |
