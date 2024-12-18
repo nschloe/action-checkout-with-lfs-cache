@@ -19,6 +19,8 @@ inputs:
     description: "Number of commits to fetch. 0 indicates all history for all tags and branches"
     required: false
     default: 1
+  path:
+    description: "Relative path under $GITHUB_WORKSPACE to place the repository"
   ref:
     description: >
       The branch, tag or SHA to checkout. When checking out the repository that
@@ -66,6 +68,7 @@ runs:
       uses: actions/checkout@v4
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
+        path: ${{ inputs.path }}
         ref: ${{ inputs.ref }}
         repository: ${{ inputs.repository }}
         token: ${{ inputs.token }}
@@ -74,6 +77,7 @@ runs:
 
     - name: Create LFS file list
       run: |
+        cd "${{ inputs.path || '.' }}"
         git lfs ls-files --long --include  "${{ inputs.include }}" --exclude  "${{ inputs.exclude }}" | cut -d ' ' -f1 > .lfs-assets-id-unsorted
         git submodule foreach git lfs ls-files --long --include  "${{ inputs.include }}" --exclude  "${{ inputs.exclude }}" | cut -d ' ' -f1 >> .lfs-assets-id-unsorted
         cat .lfs-assets-id-unsorted | sort > .lfs-assets-id
@@ -87,8 +91,8 @@ runs:
         # `git config` is used to extract the `path` value for each git submodule
         # for more information about the .gitmodules file, see: https://git-scm.com/docs/gitmodules
         while read line; do
-          CACHE_PATHS+=".git/modules/$line/lfs "
-        done < <(git config --file .gitmodules --get-regexp path | awk '{ print $2 }')
+          CACHE_PATHS+="${{ inputs.path || '.' }}/.git/modules/$line/lfs "
+        done < <(git -C "${{ inputs.path || '.' }}" config --file .gitmodules --get-regexp path | awk '{ print $2 }')
 
         echo "CACHE_PATHS=$CACHE_PATHS" >> $GITHUB_OUTPUT
       id: cache-paths
@@ -99,13 +103,14 @@ runs:
       id: lfs-cache
       with:
         path: |
-          .git/lfs
+          ${{ inputs.path || '.' }}/.git/lfs
           ${{ steps.cache-paths.outputs.CACHE_PATHS }}
-        key: lfs-${{ hashFiles('.lfs-assets-id') }}-v2
+        key: lfs-${{ hashFiles(format('{0}/.lfs-assets-id', inputs.path || '.')) }}-v2
         enableCrossOsArchive: ${{ inputs.enableCrossOsArchive }}
 
     - name: Git LFS Pull
       run: |
+        cd "${{ inputs.path || '.' }}"
         git lfs pull --include  "${{ inputs.include }}" --exclude  "${{ inputs.exclude }}"
         git submodule foreach git lfs pull --include  "${{ inputs.include }}" --exclude  "${{ inputs.exclude }}"
       shell: bash
@@ -113,6 +118,7 @@ runs:
     # Don't leave behind temp files in case build system checks for dirty workspace
     - name: Cleanup Temp Files
       run: |
+        cd "${{ inputs.path || '.' }}"
         rm .lfs-assets-id-unsorted
         rm .lfs-assets-id
       shell: bash
